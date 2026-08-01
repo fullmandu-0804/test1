@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }} | 소개{% endblock %}
+
+{% block content %}
+<section class="hero py-5">
+    <div class="container py-3 py-lg-4">
+        <h1 class="display-5 fw-bold mb-2">소개</h1>
+        <p class="lead mb-0">{{ site_name }}은 어떤 곳인가요?</p>
+    </div>
+</section>
+
+<section class="container py-5">
+    <div class="row g-4">
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 p-lg-5">
+                    <h2 class="h4 fw-bold mb-3">뚱지는 이런 사람입니다</h2>
+                    <p class="text-secondary">
+                        수원에서 나고 자란 토박이입니다. 새로 생긴 가게가 보이면
+                        일단 들어가 보는 게 취미고, 같은 메뉴를 두세 번 먹어본 뒤에야
+                        글을 씁니다.
+                    </p>
+                    <p class="text-secondary mb-0">
+                        "여기 괜찮대"라는 말만 믿고 갔다가 실망한 경험이 많아서,
+                        직접 검증한 곳만 기록으로 남기기로 했습니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4 p-lg-5">
+                    <h2 class="h4 fw-bold mb-3">기록 원칙</h2>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item px-0">✅ 내 돈 내고 먹은 곳만</li>
+                        <li class="list-group-item px-0">✅ 최소 2회 이상 방문</li>
+                        <li class="list-group-item px-0">✅ 아쉬운 점도 그대로 기록</li>
+                        <li class="list-group-item px-0">✅ 협찬 글은 반드시 표시</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-5">
+        <a href="{{ url_for('index') }}" class="btn btn-danger btn-lg px-4">홈으로 돌아가기</a>
+    </div>
+</section>
+{% endblock %}

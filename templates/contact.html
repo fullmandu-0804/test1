@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }} | 연락처{% endblock %}
+
+{% block content %}
+<section class="hero py-5">
+    <div class="container py-3 py-lg-4">
+        <h1 class="display-5 fw-bold mb-2">연락처</h1>
+        <p class="lead mb-0">맛집 제보와 문의를 기다립니다.</p>
+    </div>
+</section>
+
+<section class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4 p-lg-5">
+                    <h2 class="h4 fw-bold mb-4">이렇게 연락 주세요</h2>
+                    <div class="row g-4">
+                        <div class="col-12 col-sm-6">
+                            <div class="fs-3">📧</div>
+                            <div class="fw-semibold">이메일</div>
+                            <div class="text-secondary">hello@example.com</div>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <div class="fs-3">📷</div>
+                            <div class="fw-semibold">인스타그램</div>
+                            <div class="text-secondary">@ddungji_suwon</div>
+                        </div>
+                    </div>
+                    <hr class="my-4">
+                    <p class="text-secondary mb-0">
+                        "여기 진짜 맛있어요!" 하는 곳이 있다면 가게 이름과 위치,
+                        추천 메뉴를 함께 보내주세요. 직접 가서 확인해 보겠습니다.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
