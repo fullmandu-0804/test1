@@ -1,9 +1,20 @@
 """뚱지의 수원 맛집탐방 - Flask 웹앱."""
 
 import os
+import secrets
+from functools import wraps
 
 from dotenv import load_dotenv
-from flask import Flask, render_template
+from flask import (
+    Flask,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_migrate import Migrate
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -27,6 +38,9 @@ if not SECRET_KEY:
     SECRET_KEY = "dev-secret-key"
 
 app.config["SECRET_KEY"] = SECRET_KEY
+
+# 관리 화면 비밀번호. 비어 있으면 로컬 개발에서만 무인증으로 통과시킨다.
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 
 def resolve_database_url():
@@ -57,9 +71,17 @@ SITE_NAME = "뚱지의 수원 맛집탐방"
 
 
 @app.context_processor
-def inject_site_name():
-    """모든 템플릿에서 site_name 을 그냥 쓸 수 있게 해준다."""
-    return {"site_name": SITE_NAME}
+def inject_globals():
+    """모든 템플릿에서 공통으로 쓰는 값들."""
+    return {
+        "site_name": SITE_NAME,
+        "is_admin": bool(session.get("is_admin")) or not ADMIN_PASSWORD,
+    }
+
+
+# --------------------------------------------------------------------------
+# 공개 페이지
+# --------------------------------------------------------------------------
 
 
 @app.route("/")
@@ -71,15 +93,7 @@ def index():
 @app.route("/places")
 def places():
     """맛집 목록 페이지. DB에서 읽어와 평점 높은 순으로 보여준다."""
-    try:
-        items = Place.query.order_by(Place.rating.desc(), Place.id).all()
-        db_ready = True
-    except SQLAlchemyError:
-        # 아직 표(테이블)가 만들어지지 않은 경우에도 페이지가 깨지지 않도록 한다.
-        db.session.rollback()
-        items = []
-        db_ready = False
-
+    items, db_ready = load_places()
     return render_template(
         "places.html",
         active_page="places",
@@ -99,6 +113,198 @@ def contact():
     """연락처 페이지."""
     return render_template("contact.html", active_page="contact")
 
+
+def load_places():
+    """맛집 목록을 읽어온다. 표가 아직 없으면 빈 목록을 돌려준다."""
+    try:
+        return Place.query.order_by(Place.rating.desc(), Place.id).all(), True
+    except SQLAlchemyError:
+        # 아직 표(테이블)가 만들어지지 않은 경우에도 페이지가 깨지지 않도록 한다.
+        db.session.rollback()
+        return [], False
+
+
+# --------------------------------------------------------------------------
+# 관리 화면 (비밀번호 잠금)
+# --------------------------------------------------------------------------
+
+
+def admin_required(view):
+    """관리 화면 접근을 막는 문지기."""
+
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not ADMIN_PASSWORD:
+            if IS_PRODUCTION:
+                # 운영 환경에서 비밀번호가 없으면 아예 열지 않는다.
+                abort(503)
+            # 로컬 개발에서는 편의를 위해 그냥 통과시킨다.
+            return view(*args, **kwargs)
+
+        if not session.get("is_admin"):
+            return redirect(url_for("admin_login", next=request.path))
+
+        return view(*args, **kwargs)
+
+    return wrapper
+
+
+def safe_next_path(value):
+    """외부 사이트로 튕겨나가지 않도록 이동 경로를 검사한다."""
+    if value and value.startswith("/") and not value.startswith("//"):
+        return value
+    return url_for("admin_list")
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    """관리자 로그인."""
+    if not ADMIN_PASSWORD:
+        return redirect(url_for("admin_list"))
+
+    if request.method == "POST":
+        entered = request.form.get("password", "")
+        # 한글 등 ASCII 밖의 문자도 비교할 수 있도록 바이트로 변환한다.
+        # compare_digest 는 비교 시간을 일정하게 유지해 비밀번호 추측을 어렵게 한다.
+        if secrets.compare_digest(entered.encode("utf-8"), ADMIN_PASSWORD.encode("utf-8")):
+            session["is_admin"] = True
+            flash("로그인되었습니다.", "success")
+            return redirect(safe_next_path(request.args.get("next")))
+        flash("비밀번호가 올바르지 않습니다.", "danger")
+
+    return render_template("admin_login.html", active_page="admin")
+
+
+@app.route("/admin/logout")
+def admin_logout():
+    """로그아웃."""
+    session.pop("is_admin", None)
+    flash("로그아웃되었습니다.", "success")
+    return redirect(url_for("places"))
+
+
+@app.route("/admin")
+@admin_required
+def admin_list():
+    """관리용 맛집 목록."""
+    items, db_ready = load_places()
+    return render_template(
+        "admin_list.html",
+        active_page="admin",
+        places=items,
+        db_ready=db_ready,
+    )
+
+
+def read_place_form(form):
+    """폼에 입력된 값을 검사해서 (값, 오류목록) 으로 돌려준다."""
+    data = {
+        "name": (form.get("name") or "").strip(),
+        "district": (form.get("district") or "").strip(),
+        "category": (form.get("category") or "").strip(),
+        "one_liner": (form.get("one_liner") or "").strip(),
+        "rating": 0.0,
+    }
+    errors = []
+
+    if not data["name"]:
+        errors.append("가게 이름을 입력해 주세요.")
+    if not data["district"]:
+        errors.append("동네를 입력해 주세요.")
+
+    raw_rating = (form.get("rating") or "").strip()
+    if raw_rating:
+        try:
+            data["rating"] = float(raw_rating)
+        except ValueError:
+            errors.append("평점은 숫자로 입력해 주세요. (예: 4.5)")
+
+    if not 0 <= data["rating"] <= 5:
+        errors.append("평점은 0 이상 5 이하로 입력해 주세요.")
+
+    return data, errors
+
+
+@app.route("/admin/new", methods=["GET", "POST"])
+@admin_required
+def admin_new():
+    """맛집 등록."""
+    if request.method == "POST":
+        data, errors = read_place_form(request.form)
+        if errors:
+            for message in errors:
+                flash(message, "danger")
+            return render_template(
+                "admin_form.html",
+                active_page="admin",
+                place=data,
+                form_title="맛집 등록",
+                action_url=url_for("admin_new"),
+            )
+
+        db.session.add(Place(**data))
+        db.session.commit()
+        flash(f"'{data['name']}' 을(를) 등록했습니다.", "success")
+        return redirect(url_for("admin_list"))
+
+    return render_template(
+        "admin_form.html",
+        active_page="admin",
+        place=None,
+        form_title="맛집 등록",
+        action_url=url_for("admin_new"),
+    )
+
+
+@app.route("/admin/<int:place_id>/edit", methods=["GET", "POST"])
+@admin_required
+def admin_edit(place_id):
+    """맛집 수정."""
+    place = db.get_or_404(Place, place_id)
+
+    if request.method == "POST":
+        data, errors = read_place_form(request.form)
+        if errors:
+            for message in errors:
+                flash(message, "danger")
+            return render_template(
+                "admin_form.html",
+                active_page="admin",
+                place=data,
+                form_title="맛집 수정",
+                action_url=url_for("admin_edit", place_id=place_id),
+            )
+
+        for key, value in data.items():
+            setattr(place, key, value)
+        db.session.commit()
+        flash(f"'{place.name}' 정보를 수정했습니다.", "success")
+        return redirect(url_for("admin_list"))
+
+    return render_template(
+        "admin_form.html",
+        active_page="admin",
+        place=place,
+        form_title="맛집 수정",
+        action_url=url_for("admin_edit", place_id=place_id),
+    )
+
+
+@app.route("/admin/<int:place_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete(place_id):
+    """맛집 삭제."""
+    place = db.get_or_404(Place, place_id)
+    name = place.name
+    db.session.delete(place)
+    db.session.commit()
+    flash(f"'{name}' 을(를) 삭제했습니다.", "success")
+    return redirect(url_for("admin_list"))
+
+
+# --------------------------------------------------------------------------
+# 샘플 데이터
+# --------------------------------------------------------------------------
 
 # 화면 확인용 샘플 데이터. 나중에 진짜 맛집 정보로 교체하면 된다.
 SAMPLE_PLACES = [
@@ -152,8 +358,7 @@ def seed():
     """샘플 맛집 데이터를 DB에 넣는다. (이미 있으면 건너뛴다)"""
     added = 0
     for data in SAMPLE_PLACES:
-        exists = Place.query.filter_by(name=data["name"]).first()
-        if exists:
+        if Place.query.filter_by(name=data["name"]).first():
             continue
         db.session.add(Place(**data))
         added += 1

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }} | 맛집 관리{% endblock %}
+
+{% block content %}
+<section class="hero py-5">
+    <div class="container py-3 py-lg-4 d-flex flex-column flex-md-row
+                justify-content-between align-items-md-center gap-3">
+        <div>
+            <h1 class="display-6 fw-bold mb-1">맛집 관리</h1>
+            <p class="mb-0">등록된 맛집 {{ places|length }}곳</p>
+        </div>
+        <a href="{{ url_for('admin_new') }}" class="btn btn-light btn-lg px-4 fw-semibold">
+            + 맛집 등록
+        </a>
+    </div>
+</section>
+
+<section class="container py-5">
+    {% if not db_ready %}
+    <div class="alert alert-warning">
+        데이터베이스 표가 아직 없습니다. <code>flask db upgrade</code> 를 먼저 실행해 주세요.
+    </div>
+    {% elif places %}
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>이름</th>
+                    <th>동네</th>
+                    <th>분류</th>
+                    <th class="text-end">평점</th>
+                    <th>한줄평</th>
+                    <th class="text-end">작업</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for place in places %}
+                <tr>
+                    <td class="fw-semibold">{{ place.name }}</td>
+                    <td><span class="badge text-bg-danger">{{ place.district }}</span></td>
+                    <td class="text-secondary">{{ place.category or "-" }}</td>
+                    <td class="text-end">{{ "%.1f"|format(place.rating) }}</td>
+                    <td class="text-secondary small">{{ place.one_liner or "-" }}</td>
+                    <td class="text-end text-nowrap">
+                        <a href="{{ url_for('admin_edit', place_id=place.id) }}"
+                           class="btn btn-sm btn-outline-secondary">수정</a>
+                        <form action="{{ url_for('admin_delete', place_id=place.id) }}"
+                              method="post" class="d-inline"
+                              onsubmit="return confirm('{{ place.name }} 을(를) 삭제할까요?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">삭제</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="fs-1 mb-3">🍽️</div>
+        <p class="text-secondary mb-3">아직 등록된 맛집이 없습니다.</p>
+        <a href="{{ url_for('admin_new') }}" class="btn btn-danger px-4">첫 맛집 등록하기</a>
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('places') }}" class="text-secondary">← 공개 목록 보기</a>
+        <a href="{{ url_for('admin_logout') }}" class="text-secondary ms-3">로그아웃</a>
+    </div>
+</section>
+{% endblock %}

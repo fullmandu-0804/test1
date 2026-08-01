@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }} | {{ form_title }}{% endblock %}
+
+{% block content %}
+<section class="hero py-5">
+    <div class="container py-3 py-lg-4">
+        <h1 class="display-6 fw-bold mb-0">{{ form_title }}</h1>
+    </div>
+</section>
+
+<section class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4 p-lg-5">
+                    <form method="post" action="{{ action_url }}">
+                        <div class="mb-3">
+                            <label for="name" class="form-label fw-semibold">
+                                가게 이름 <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                   maxlength="100" required
+                                   value="{{ place.name if place else '' }}">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 col-sm-6 mb-3">
+                                <label for="district" class="form-label fw-semibold">
+                                    동네 <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="district"
+                                       name="district" maxlength="50" required
+                                       placeholder="예: 행궁동"
+                                       value="{{ place.district if place else '' }}">
+                            </div>
+                            <div class="col-12 col-sm-6 mb-3">
+                                <label for="category" class="form-label fw-semibold">분류</label>
+                                <input type="text" class="form-control" id="category"
+                                       name="category" maxlength="50"
+                                       placeholder="예: 한식, 카페"
+                                       value="{{ place.category if place else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="rating" class="form-label fw-semibold">평점 (0 ~ 5)</label>
+                            <input type="number" class="form-control" id="rating" name="rating"
+                                   step="0.1" min="0" max="5" placeholder="예: 4.5"
+                                   value="{{ '%.1f'|format(place.rating) if place else '' }}">
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="one_liner" class="form-label fw-semibold">한줄평</label>
+                            <textarea class="form-control" id="one_liner" name="one_liner"
+                                      rows="3" maxlength="200"
+                                      placeholder="솔직한 한마디를 남겨주세요."
+                                      >{{ place.one_liner if place else '' }}</textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger px-4">저장</button>
+                            <a href="{{ url_for('admin_list') }}"
+                               class="btn btn-outline-secondary px-4">취소</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
