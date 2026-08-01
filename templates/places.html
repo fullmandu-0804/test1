@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }} | 맛집 목록{% endblock %}
+
+{% block content %}
+<section class="hero py-5">
+    <div class="container py-3 py-lg-4">
+        <h1 class="display-5 fw-bold mb-2">맛집 목록</h1>
+        <p class="lead mb-0">
+            {% if places %}
+                지금까지 기록한 {{ places|length }}곳입니다.
+            {% else %}
+                아직 기록된 맛집이 없습니다.
+            {% endif %}
+        </p>
+    </div>
+</section>
+
+<section class="container py-5">
+    {% if places %}
+    <div class="row g-4">
+        {% for place in places %}
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge text-bg-danger">{{ place.district }}</span>
+                        {% if place.category %}
+                        <span class="badge text-bg-light text-secondary">{{ place.category }}</span>
+                        {% endif %}
+                    </div>
+
+                    <h2 class="h5 card-title fw-bold mb-2">{{ place.name }}</h2>
+
+                    <div class="mb-3 text-warning">
+                        {% for _ in range(place.rating | round(0, 'floor') | int) %}★{% endfor %}
+                        <span class="text-secondary small ms-1">
+                            {{ "%.1f"|format(place.rating) }}
+                        </span>
+                    </div>
+
+                    <p class="card-text text-secondary mb-0">
+                        {{ place.one_liner or "한줄평 준비 중입니다." }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <div class="fs-1 mb-3">🍽️</div>
+        {% if db_ready %}
+        <p class="text-secondary mb-1">아직 등록된 맛집이 없습니다.</p>
+        <p class="text-secondary small mb-0">
+            터미널에서 <code>flask seed</code> 를 실행하면 샘플 데이터가 채워집니다.
+        </p>
+        {% else %}
+        <p class="text-secondary mb-1">데이터베이스 준비가 아직 끝나지 않았습니다.</p>
+        <p class="text-secondary small mb-0">
+            <code>flask db upgrade</code> 로 표를 먼저 만들어 주세요.
+        </p>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
