@@ -4,9 +4,14 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask, render_template
+from flask_migrate import Migrate
+
+from models import db
 
 # .env 파일에 적어둔 값들을 환경변수로 불러온다.
 load_dotenv()
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # FLASK_ENV=production 이면 운영 모드로 판단한다. (기본값은 개발 모드)
 IS_PRODUCTION = os.getenv("FLASK_ENV", "development").lower() == "production"
@@ -21,7 +26,31 @@ if not SECRET_KEY:
     SECRET_KEY = "dev-secret-key"
 
 app.config["SECRET_KEY"] = SECRET_KEY
-app.config["DATABASE_URL"] = os.getenv("DATABASE_URL")  # 추후 DB 연동용
+
+
+def resolve_database_url():
+    """DATABASE_URL 이 있으면 PostgreSQL, 없으면 로컬 SQLite 를 쓴다."""
+    url = (os.getenv("DATABASE_URL") or "").strip()
+
+    if not url:
+        # 로컬 개발용: 프로젝트 폴더에 local.db 파일 하나로 동작한다.
+        sqlite_path = os.path.join(BASE_DIR, "local.db").replace("\\", "/")
+        return f"sqlite:///{sqlite_path}"
+
+    # Render/Heroku 는 postgres:// 형식으로 주는데
+    # SQLAlchemy 는 postgresql:// 형식만 인식하므로 바꿔준다.
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+
+    return url
+
+
+app.config["SQLALCHEMY_DATABASE_URI"] = resolve_database_url()
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# DB와 마이그레이션(설계도 변경 이력) 기능을 앱에 연결한다.
+db.init_app(app)
+migrate = Migrate(app, db)
 
 SITE_NAME = "뚱지의 수원 맛집탐방"
 
