@@ -4,15 +4,23 @@
 
 {% block content %}
 <section class="hero py-5">
-    <div class="container py-3 py-lg-4">
-        <h1 class="display-5 fw-bold mb-2">맛집 목록</h1>
-        <p class="lead mb-0">
-            {% if places %}
-                지금까지 기록한 {{ places|length }}곳입니다.
-            {% else %}
-                아직 기록된 맛집이 없습니다.
-            {% endif %}
-        </p>
+    <div class="container py-3 py-lg-4 d-flex flex-column flex-md-row
+                justify-content-between align-items-md-center gap-3">
+        <div>
+            <h1 class="display-5 fw-bold mb-2">맛집 목록</h1>
+            <p class="lead mb-0">
+                {% if places %}
+                    지금까지 기록한 {{ places|length }}곳입니다.
+                {% else %}
+                    아직 기록된 맛집이 없습니다.
+                {% endif %}
+            </p>
+        </div>
+        <a href="{{ url_for('admin_list') }}"
+           class="btn btn-outline-light btn-lg px-4 text-nowrap align-self-start
+                  align-self-md-center">
+            ✏️ 등록 / 편집
+        </a>
     </div>
 </section>
 
