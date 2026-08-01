@@ -1,0 +1,32 @@
+# Render.com Web Service 자동 설정 파일
+# 저장소를 Render에 연결하면 이 파일을 읽어 서비스를 구성한다.
+services:
+  - type: web
+    name: ddungji-suwon-matjip
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+
+    # 서비스가 살아있는지 Render가 확인하는 경로
+    healthCheckPath: /
+
+    envVars:
+      # 파이썬 버전 고정 (GitHub Actions 와 동일하게 3.11)
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+
+      # 운영 모드로 동작시켜 debug 를 자동으로 끈다
+      - key: FLASK_ENV
+        value: production
+
+      # Render가 임의의 안전한 값을 자동 생성해 준다
+      - key: SECRET_KEY
+        generateValue: true
+
+      # DB 연결 주소는 Render 대시보드에서 직접 입력한다
+      - key: DATABASE_URL
+        sync: false
