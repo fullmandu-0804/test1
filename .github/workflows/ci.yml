@@ -1,0 +1,45 @@
+name: CI
+
+# main 브랜치에 push 되거나, main 으로 PR이 열릴 때 자동 실행
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Flask 앱 검사
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 저장소 코드를 내려받는다
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      # 2. Python 3.11 환경을 준비한다
+      - name: Python 3.11 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # 3. 필요한 패키지를 설치한다
+      - name: 패키지 설치
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install flake8
+
+      # 4. 코드 스타일 검사 (선택)
+      #    1차: 진짜 오류(문법 에러, 정의되지 않은 이름)는 발견 시 실패 처리
+      #    2차: 스타일 지적은 경고만 출력하고 통과(--exit-zero)
+      - name: flake8 코드 검사
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+
+      # 5. Flask 앱이 문법 오류 없이 import 되는지 확인
+      - name: Flask 앱 import 확인
+        run: |
+          python -c "from app import app; print('Flask 앱 import 성공:', app.name)"
